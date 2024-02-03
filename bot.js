@@ -22,7 +22,6 @@ client.on('messageCreate', async message => {
     // Log every message received (not including ones sent by the bot)
     if (!message.author.bot) {
         console.log(`Message received: ${message.content}`);
-        n
     }
 
     // Check if the bot is mentioned and say hello
