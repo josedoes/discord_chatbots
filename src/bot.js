@@ -1,7 +1,11 @@
-require('dotenv').config(); // Make sure to require dotenv at the top
-const { Client, Intents } = require('discord.js');
+// Using ES Module import syntax
+import dotenv from 'dotenv';
+dotenv.config(); // Make sure to import and configure dotenv at the top
+import { Client, Intents } from 'discord.js';
+import { fetchData } from './ii-sdk.js'; // Ensure the path is correct; add '.js' extension
 
 const token = process.env.DISCORD_BOT_TOKEN;
+const iiKEY = process.env.II_KEY;
 
 const client = new Client({
     intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES]
@@ -20,7 +24,20 @@ client.on('messageCreate', async message => {
     }
 
     if (message.mentions.users.has(client.user.id)) {
-        message.channel.send('Hey Guys! They are fixing LLM LAB right now, once the maintenace is complete Ill be able to talk!').then(() => {
+        let botId = 'eb61f8a2-f7ef-4013-aad0-a75ceb334e7d';
+
+        let result = await fetchData(iiKEY, botId,
+
+            [{
+                "role": "user",
+                "content": message.content
+            }]
+
+
+        );
+
+        // Ensure handling of result and errors appropriately
+        message.channel.send(result).then(() => {
             console.log('Greeting sent successfully.');
         }).catch(error => {
             console.error('An error occurred while sending the greeting:', error);
