@@ -10,7 +10,7 @@ export async function fetchData(apikey, model, messages) {
     const config = {
         method: 'post',
         maxBodyLength: Infinity,
-        url: 'https://launch-api.com:8443/v1/chat/completions',
+        url: 'https://launch-api.com/v1/chat/completions',
         headers: {
             apikey: apikey, // 'apikey' value is taken from the function parameter
             'Content-Type': 'application/json'
