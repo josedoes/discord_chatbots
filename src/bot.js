@@ -11,11 +11,13 @@ const botConfigs = [
         name: 'Project Manager',
         token: process.env.DISCORD_PM_TOKEN,
         ii_id: 'ee135f4e-d614-4dd1-9f26-9df83e35a7bc',
+        showOpen: true
     },
     {
         name: 'Banana',
         token: process.env.DISCORD_BANANA_TOKEN,
         ii_id: '57b2d811-a69b-4597-af51-148e94c823cc',
+        showOpen: false
 
     }
 ];
@@ -49,7 +51,7 @@ function createBot(config) {
                 const fetchAmount = 20 - currentHistoryLength;
                 if (fetchAmount > 0) {
                     const fetchedMessages = await message.channel.messages.fetch({ limit: fetchAmount });
-                    const initialMessages = fetchedMessages.map(msg => ({ user: msg.author.username, content: msg.content }));
+                    const initialMessages = fetchedMessages.map(msg => ({ role: 'user', content: `${msg.author.username}: ${msg.content}` }));
                     channelMessageHistory.get(message.channel.id).unshift(...initialMessages.reverse()); // Prepend the fetched messages
                 }
             } catch (error) {
@@ -57,7 +59,7 @@ function createBot(config) {
             }
 
             channelHistory = channelMessageHistory.get(message.channel.id);
-            channelHistory.push({ user: message.author.username, content: message.content });
+            channelHistory.push({ role: 'assistant', content: `${message.content}` });
             if (channelHistory.length > 20) {
                 channelHistory.splice(0, channelHistory.length - 20);
             }
@@ -65,13 +67,12 @@ function createBot(config) {
         const botWasMentioned = message.mentions.users.has(client.user.id);
         console.log('bot was mentioned:', botWasMentioned)
         if (botWasMentioned) {
-
-            const issues = await getIssues(githubIssues, message.author.username, true);
+            const issues = await getIssues(githubIssues, message.author.username, config.showOpen);
             console.log(
                 'issues gotten:', issues
             )
             const promptMessageHistory = [
-                ...formatMessageHistory(channelHistory),
+                ...channelHistory,
                 { 'role': 'assistant', 'content': `LIST OF TASKS THE USER NEEDS TO COMPLETE:\n${issues}\n` },
 
                 {
