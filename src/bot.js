@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { Client, Intents } from 'discord.js';
 import { fetchData } from './ii-sdk.js';
+import { fetchGithubIssuesForUser } from './github_service.js';
 
 const iiKEY = process.env.II_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -27,6 +28,7 @@ function createBot(config) {
     const { token } = config;
 
     const channelMessageHistory = new Map(); // Map to store message history for each channel
+    const githubIssues = new Map();
 
     // Bot ready event
     client.once('ready', () => {
@@ -39,14 +41,12 @@ function createBot(config) {
         const isUserMessage = !message.author.bot;
         if (isUserMessage) {
             console.log(`Message received from ${message.author.username}: ${message.content}`);
-            // Store the last 10 messages for each channel
             if (!channelMessageHistory.has(message.channel.id)) {
                 channelMessageHistory.set(message.channel.id, []);
             }
-
             try {
                 const currentHistoryLength = channelMessageHistory.get(message.channel.id).length;
-                const fetchAmount = 10 - currentHistoryLength;
+                const fetchAmount = 20 - currentHistoryLength;
                 if (fetchAmount > 0) {
                     const fetchedMessages = await message.channel.messages.fetch({ limit: fetchAmount });
                     const initialMessages = fetchedMessages.map(msg => ({ user: msg.author.username, content: msg.content }));
@@ -58,19 +58,27 @@ function createBot(config) {
 
             channelHistory = channelMessageHistory.get(message.channel.id);
             channelHistory.push({ user: message.author.username, content: message.content });
-            if (channelHistory.length > 10) {
-                channelHistory.splice(0, channelHistory.length - 10); // Remove the oldest messages to keep only the last 10
+            if (channelHistory.length > 20) {
+                channelHistory.splice(0, channelHistory.length - 20);
             }
         }
         const botWasMentioned = message.mentions.users.has(client.user.id);
         console.log('bot was mentioned:', botWasMentioned)
         if (botWasMentioned) {
+
+            const issues = await getIssues(githubIssues, message.author.username, true);
+            console.log(
+                'issues gotten:', issues
+            )
             const promptMessageHistory = [
                 ...formatMessageHistory(channelHistory),
+                { 'role': 'assistant', 'content': `LIST OF TASKS THE USER NEEDS TO COMPLETE:\n${issues}\n` },
+
                 {
                     "role": "user",
                     "content": message.content
-                }
+                },
+
             ];
             console.log('sending:', promptMessageHistory)
             let result = await fetchData(iiKEY, config.ii_id, promptMessageHistory);
@@ -114,3 +122,35 @@ function formatMessageHistory(messages) {
         };
     });
 }
+async function getIssues(issuesCache, sender, onlyOpen) {
+    const usernames = { 'lucystag': 'luciana-lara', 'joselolol.': 'joselaracode', 'strawberry_milks_': 'lealari', 'marilara33': 'marianalara33' };
+    const username = usernames[sender];
+    try {
+        if (!username) {
+            return 'Username mapping not found.';
+        }
+        const openCacheKey = `open-issues-${username}`;
+        const closedCacheKey = `closed-issues-${username}`;
+        if (!issuesCache.has(openCacheKey) || !issuesCache.has(closedCacheKey)) {
+            const issues = await fetchGithubIssuesForUser('intelligent-iterations', GITHUB_TOKEN, username);
+            const openIssues = issues.filter(issue => issue.state === 'open');
+            const closedIssues = issues.filter(issue => issue.state === 'closed');
+            const openIssueMessages = openIssues.map(issue => `${issue.title}: ${issue.html_url}`).join('\n');
+            const closedIssueMessages = closedIssues.map(issue => `${issue.title}: ${issue.html_url}`).join('\n');
+            issuesCache.set(openCacheKey, openIssueMessages);
+            issuesCache.set(closedCacheKey, closedIssueMessages);
+            return `Open issues:\n${openIssueMessages || 'No open issues.'}\n\nClosed issues:\n${closedIssueMessages || 'No closed issues.'}`;
+        } else {
+            const openIssues = issuesCache.get(openCacheKey);
+            const closedIssues = issuesCache.get(closedCacheKey);
+            const finalIssues = onlyOpen ? `${openIssues}` : `${closedIssues}`
+            const prefix = onlyOpen ? `Open issues` : `Closed issues`
+            return `${prefix}:\n${finalIssues || 'No issues.'}`;
+        }
+    } catch (error) {
+        console.error('Error fetching GitHub issues:', error);
+        return 'Failed to fetch issues.';
+    }
+}
+
+

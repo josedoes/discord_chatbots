@@ -4,6 +4,7 @@ export async function fetchData(apikey, model, messages) {
     const data = JSON.stringify({
         model: model,
         stream: false,
+        maxTokens: 500,
         messages
     });
 
