@@ -5,7 +5,7 @@
     "description": "project manager chatbot",
     "main": "/src/bot.js",
     "scripts": {
-        "start": "node src/bot.js"
+        "start": "node src/main.js"
     },
     "dependencies": {
         "axios": "^0.21.1",

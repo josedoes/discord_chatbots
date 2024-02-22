@@ -5,7 +5,7 @@ import { fetchData } from './ii-sdk.js';
 import { formatUpdateData, getRepoAndIssueNumberFromLink } from './util.js';
 import { getGithubIssuesPrompt, updateGithubIssue } from './github_service.js';
 
-class Bot {
+export class Bot {
     constructor(config, projectConfig) {
         this.client = new Client({
             intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES]
@@ -14,12 +14,15 @@ class Bot {
         this.ii_id = config.ii_id;
         this.channelMessageHistory = new Map();
         this.issuesCache = new Map();
+        this.projectConfig = projectConfig;
+        this.config = config;
 
         this.client.once('ready', () => {
-            console.log(`${config.name} is online and ready to serve!`);
+            console.log(`${this.config.name} is online and ready to serve!`);
         });
 
         this.client.on('messageCreate', async message => {
+            console.log('projectConfig', this.projectConfig)
             let _updateIssue;
             const { updateIssue, channelHistory } = await this.processMessage(message);
             _updateIssue = updateIssue;
@@ -27,9 +30,9 @@ class Bot {
             const botWasMentioned = message.mentions.users.has(this.client.user.id);
             console.log('bot was mentioned:', botWasMentioned)
             if (botWasMentioned) {
-                const username = projectConfig.discordToGithubUsernames[message.author.username];
+                const username = this.projectConfig.discordToGithubUsernames[message.author.username];
 
-                const issues = await getGithubIssuesPrompt(projectConfig.githubOrg, this.issuesCache, username, config.showOpen, projectConfig.GITHUB_TOKEN);
+                const issues = await getGithubIssuesPrompt(this.projectConfig.githubOrg, this.issuesCache, username, this.config.showOpen, this.projectConfig.GITHUB_TOKEN);
                 console.log(
                     'issues gotten length', issues.length
                 )
@@ -54,7 +57,7 @@ class Bot {
                 let _aiResponse;
                 if (_updateIssue) {
                     const sender = message.author.username;
-                    const discordUsernames = Object.keys(projectConfig.discordToGithubUsernames);
+                    const discordUsernames = Object.keys(this.projectConfig.discordToGithubUsernames);
                     console.log('sender and discord usernames', sender, discordUsernames)
                     const isPartOfTeam = discordUsernames.includes(sender);
 
@@ -70,7 +73,7 @@ class Bot {
                             const updateData = await this.fetchUpdateDataFromAgent(this.issuesCache, issueNumber, message.content, _aiResponse);
                             console.log('update data result', updateData)
                             try {
-                                const issueUrl = await updateGithubIssue(org, repo, projectConfig.GITHUB_TOKEN, issueNumber, updateData);
+                                const issueUrl = await updateGithubIssue(org, repo, this.projectConfig.GITHUB_TOKEN, issueNumber, updateData);
                                 message.channel.send(`Issue updated: ${issueUrl}`);
                             }
                             catch (error) {
@@ -95,7 +98,7 @@ class Bot {
                     }
                 }
                 else {
-                    _aiResponse = await fetchData(projectConfig.iiKEY, this.ii_id, promptMessageHistory);
+                    _aiResponse = await fetchData(this.projectConfig.iiKEY, this.ii_id, promptMessageHistory);
 
                     message.channel.send(_aiResponse).then(() => {
                         console.log('Response sent successfully.');
@@ -123,7 +126,7 @@ class Bot {
             detailsToUse = issueDetailsFromMessage;
         } else {
             console.log('using ai provided details')
-            const response = await fetchData(projectConfig.iiKEY, this.ii_id, [...promptMessageHistory, { 'role': 'user', 'content': 'i expect that the first link you send will be link to the issue that will be updated' }]);
+            const response = await fetchData(this.projectConfig.iiKEY, this.ii_id, [...promptMessageHistory, { 'role': 'user', 'content': 'i expect that the first link you send will be link to the issue that will be updated' }]);
             aiResponse = response
             const issueDetailsFromAI = getRepoAndIssueNumberFromLink(aiResponse);
             detailsToUse = issueDetailsFromAI;
@@ -131,9 +134,10 @@ class Bot {
         console.log('detailsToUse', detailsToUse)
         return { aiResponse, detailsToUse };
     }
+
     async processMessage(message) {
         let updateIssue = false;
-        const maxMessageCacheLength = projectConfig.maxMessageCacheLength;
+        const maxMessageCacheLength = this.projectConfig.maxMessageCacheLength;
         const isUserMessage = !message.author.bot;
         let contextChannelHistory;
         if (isUserMessage) {
@@ -167,14 +171,14 @@ class Bot {
         if (!issueDetails) {
             return null;
         }
-        const possibleAssignees = Object.values(projectConfig.discordToGithubUsernames).join(', ')
+        const possibleAssignees = Object.values(this.projectConfig.discordToGithubUsernames).join(', ')
         const oldDetails = `Title: ${issueDetails.title}\nDescription: ${issueDetails.body}\nAssignees: ${issueDetails.assignees.map(a => a.login).join(', ')}\nStatus: ${issueDetails.state}`;
         const prompt = [
             { 'role': 'user', 'content': `\nbe aware that the possible asignees are ${possibleAssignees}\nOld version:\n${oldDetails}\n#instruction for new version:\nbroad${userMessage}\ndetailed:${aiResponse}` }
         ];
         console.log('sending ticket agent..', prompt)
 
-        let result = await fetchData(projectConfig.iiKEY, projectConfig.issuesUpdaterBotId, prompt);
+        let result = await fetchData(this.projectConfig.iiKEY, this.projectConfig.updateIssuesBotId, prompt);
         console.log('result from ticketagent', result);
         return formatUpdateData(result);
     }
@@ -192,34 +196,7 @@ class Bot {
     }
 }
 
-const iiKEY = process.env.II_KEY;
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const discordBotConfig = [
-    {
-        name: 'Project Manager',
-        token: process.env.DISCORD_PM_TOKEN,
-        ii_id: 'ee135f4e-d614-4dd1-9f26-9df83e35a7bc',
-        showOpen: true
-    },
-    {
-        name: 'Banana',
-        token: process.env.DISCORD_BANANA_TOKEN,
-        ii_id: '57b2d811-a69b-4597-af51-148e94c823cc',
-        showOpen: false
 
-    }
-];
-const projectConfig = {
-    githubOrg: 'intelligent-iterations',
-    discordToGithubUsernames: { 'joselolol.': 'joselaracode', 'strawberry_milks_': 'lealari', 'marilara33': 'marianalara33', 'lucystag': 'luciana-lara' },
-    issuesUpdaterBotId: "9148cda6-e7e7-4c70-a660-58e505840997",
-    maxMessageCacheLength: 10,
-    iiKEY: iiKEY,
-    GITHUB_TOKEN: GITHUB_TOKEN,
-}
-const bots = discordBotConfig.map(config => new Bot(config, projectConfig));
-
-bots.forEach(bot => bot.start());
 
 
 
