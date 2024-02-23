@@ -22,91 +22,30 @@ export class Bot {
         });
 
         this.client.on('messageCreate', async message => {
-            console.log('projectConfig', this.projectConfig)
             let _updateIssue;
-            const { updateIssue, channelHistory } = await this.processMessage(message);
+            const { updateIssue, channelHistory } = await this.handleCache(message);
             _updateIssue = updateIssue;
 
             const botWasMentioned = message.mentions.users.has(this.client.user.id);
             console.log('bot was mentioned:', botWasMentioned)
             if (botWasMentioned) {
                 const username = this.projectConfig.discordToGithubUsernames[message.author.username];
+                const issues = await getGithubIssuesPrompt(this.projectConfig.githubOrg, this.issuesCache, username, this.config.showOpenIssues, this.projectConfig.GITHUB_TOKEN);
+                console.log('issues gotten length', issues.length)
 
-                const issues = await getGithubIssuesPrompt(this.projectConfig.githubOrg, this.issuesCache, username, this.config.showOpen, this.projectConfig.GITHUB_TOKEN);
-                console.log(
-                    'issues gotten length', issues.length
-                )
-                const taskElement = { 'role': 'assistant', 'content': `LIST OF TASKS THE USER NEEDS TO COMPLETE:\n${issues}\n` };
-                let promptMessageHistory = [
-                    {
-                        "role": "user",
-                        "content": `${message.author}: ${message.content}`
-                    },
-
-                ];
-                if (channelHistory) {
-                    promptMessageHistory.unshift(...channelHistory)
-
-                }
-
-                if (!_updateIssue) {
-                    promptMessageHistory.unshift(taskElement)
-                }
-
+                const promptMessageHistory = this.buildPrompt(message, channelHistory, issues);
                 console.log('promptMessageHistory:', promptMessageHistory)
+
                 let _aiResponse;
                 if (_updateIssue) {
-                    const sender = message.author.username;
-                    const discordUsernames = Object.keys(this.projectConfig.discordToGithubUsernames);
-                    console.log('sender and discord usernames', sender, discordUsernames)
-                    const isPartOfTeam = discordUsernames.includes(sender);
-
-                    if (isPartOfTeam) {
-                        _updateIssue = false;
-                        console.log('updateIssue called')
-
-                        const { aiResponse, detailsToUse } = await this.getIssueDetails(message, promptMessageHistory);
-                        _aiResponse = aiResponse;
-                        if (detailsToUse) {
-                            console.log('detailsToUse is valid')
-                            const { org, repo, issueNumber } = detailsToUse;
-                            const updateData = await this.fetchUpdateDataFromAgent(this.issuesCache, issueNumber, message.content, _aiResponse);
-                            console.log('update data result', updateData)
-                            try {
-                                const issueUrl = await updateGithubIssue(org, repo, this.projectConfig.GITHUB_TOKEN, issueNumber, updateData);
-                                message.channel.send(`Issue updated: ${issueUrl}`);
-                            }
-                            catch (error) {
-                                console.error('Error updating GitHub issue:', error);
-                                message.channel.send('Failed to update issue.');
-                            }
-                        } else {
-                            _aiResponse = 'Will do! I am having trouble understanding which issue you want to update, please retry the command with the link included!';
-
-                        }
-
-                    } else {
-                        _aiResponse = 'Sorry! Only members of the github team can request issue updates';
-                    }
-
-                    if (_aiResponse) {
-                        message.channel.send(_aiResponse).then(() => {
-                            console.log('Response sent successfully.');
-                        }).catch(error => {
-                            console.error('An error occurred while sending the response:', error);
-                        });
-                    }
-                }
-                else {
+                    _updateIssue = false;
+                    _aiResponse = this.isPartOfTeam(message) ? await this.startUpdateIssue(message, promptMessageHistory) : 'Sorry! Only members of the GitHub team can request issue updates';
+                } else {
                     _aiResponse = await fetchData(this.projectConfig.iiKEY, this.ii_id, promptMessageHistory);
-
-                    message.channel.send(_aiResponse).then(() => {
-                        console.log('Response sent successfully.');
-                    }).catch(error => {
-                        console.error('An error occurred while sending the response:', error);
-                    });
                 }
-
+                if (_aiResponse) {
+                    await this.sendMessage(message.channel, _aiResponse);
+                }
             }
         });
 
@@ -115,7 +54,61 @@ export class Bot {
         });
 
     }
+    buildPrompt(message, channelHistory, issues) {
+        const taskElement = { 'role': 'assistant', 'content': `LIST OF TASKS THE USER NEEDS TO COMPLETE:\n${issues}\n` };
+        let promptMessageHistory = [
+            taskElement,
+            {
+                "role": "user",
+                "content": `${message.author}: ${message.content}`
+            },
 
+        ];
+        if (channelHistory) {
+            promptMessageHistory.unshift(...channelHistory)
+
+        }
+        return promptMessageHistory;
+    }
+    isPartOfTeam(message) {
+        const sender = message.author.username;
+        const discordUsernames = Object.keys(this.projectConfig.discordToGithubUsernames);
+        return discordUsernames.includes(sender);
+    }
+    async sendMessage(channel, message) {
+        try {
+            await channel.send(message);
+            console.log('Response sent successfully.');
+        } catch (error) {
+            console.error('An error occurred while sending the response:', error);
+        }
+    }
+
+    async startUpdateIssue(message, promptMessageHistory) {
+        let _aiResponse;
+        console.log('startUpdateIssue called')
+        const { aiResponse: pmRepsonse, detailsToUse } = await this.getIssueDetails(message, promptMessageHistory);
+        _aiResponse = pmRepsonse;
+        if (detailsToUse) {
+            console.log('detailsToUse is valid')
+            const { org, repo, issueNumber } = detailsToUse;
+            const updateData = await this.fetchUpdateDataFromAgent(this.issuesCache, issueNumber, message.content, _aiResponse);
+            console.log('update data result', updateData)
+            try {
+                const issueUrl = await updateGithubIssue(org, repo, this.projectConfig.GITHUB_TOKEN, issueNumber, updateData);
+                _aiResponse = `Issue updated: ${issueUrl}\n${pmRepsonse}`;
+
+            }
+            catch (error) {
+                console.error('Error updating GitHub issue:', error);
+                _aiResponse = 'Failed to update issue.';
+            }
+        } else {
+            _aiResponse = 'Will do! I am having trouble understanding which issue you want to update, please retry the command with the link included!';
+        }
+
+        return _aiResponse;
+    }
     async getIssueDetails(message, promptMessageHistory) {
 
         let detailsToUse;
@@ -135,7 +128,7 @@ export class Bot {
         return { aiResponse, detailsToUse };
     }
 
-    async processMessage(message) {
+    async handleCache(message) {
         let updateIssue = false;
         const maxMessageCacheLength = this.projectConfig.maxMessageCacheLength;
         const isUserMessage = !message.author.bot;
