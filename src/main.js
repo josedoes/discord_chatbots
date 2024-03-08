@@ -8,13 +8,13 @@ const discordBotConfig = [
     {
         name: 'Project Manager',
         token: process.env.DISCORD_PM_TOKEN,
-        ii_id: 'ee135f4e-d614-4dd1-9f26-9df83e35a7bc',
+        agentId: 'ee135f4e-d614-4dd1-9f26-9df83e35a7bc',
         showOpen: true
     },
     {
         name: 'Banana',
         token: process.env.DISCORD_BANANA_TOKEN,
-        ii_id: '57b2d811-a69b-4597-af51-148e94c823cc',
+        agentId: '57b2d811-a69b-4597-af51-148e94c823cc',
         showOpen: false
 
     }
@@ -29,4 +29,4 @@ const projectConfig = {
 }
 const bots = discordBotConfig.map(config => new Bot(config, projectConfig));
 
-bots.forEach(bot => bot.start());
+bots.forEach(async bot => await bot.start());

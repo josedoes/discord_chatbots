@@ -48,8 +48,26 @@ export async function updateGithubIssue(org, repo, token, issueNumber, updateDat
         throw new Error(`Failed to update GitHub issue: ${error.response.statusText}`);
     }
 }
+export async function createGithubIssue(org, repo, token, title, body, assignees) {
+    const url = `https://api.github.com/repos/${org}/${repo}/issues`;
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json'
+    };
+    const data = {
+        title,
+        body,
+        assignees
+    };
+    try {
+        const response = await axios.post(url, data, { headers });
+        return response.data.html_url; // Return the URL of the created issue
+    } catch (error) {
+        throw new Error(`Failed to create GitHub issue: ${error.response.statusText}`);
+    }
+}
 
-export async function getGithubIssuesPrompt(org,issuesCache, username, onlyOpen,token) {
+export async function getGithubIssuesPrompt(org, issuesCache, username, onlyOpen, token) {
     try {
         if (!username) {
             return 'No Issues for Sender';
@@ -98,3 +116,18 @@ export async function getGithubIssuesPrompt(org,issuesCache, username, onlyOpen,
 
 
 
+export async function fetchRepos(org, token) {
+    const url = `https://api.github.com/orgs/${org}/repos`;
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json'
+    };
+
+    try {
+        const response = await axios.get(url, { headers });
+        return response.data.map(repo => repo.name); // Return an array of repository names
+    } catch (error) {
+        console.error('Error fetching repositories:', error);
+        return [];
+    }
+}

@@ -1,13 +1,14 @@
 import axios from 'axios';
-
-export async function fetchData(apikey, model, messages) {
+export async function fetchData(apikey, model, messages, maxTokens = 500) {
+    console.log('model', model)
     const data = JSON.stringify({
         model: model,
         stream: false,
-        maxTokens: 500,
+        maxTokens: maxTokens,
         messages
     });
 
+    console.log('sending data..', data)
     const config = {
         method: 'post',
         maxBodyLength: Infinity,

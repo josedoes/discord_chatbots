@@ -11,12 +11,24 @@ export function formatUpdateData(result) {
         if (typeof parsedResult === 'object') {
             if (parsedResult.name) updateData.title = parsedResult.name;
             if (parsedResult.description) updateData.body = parsedResult.description;
-            if (parsedResult.assignees) updateData.assignees = parsedResult.assignees.split(',').map(a => a.trim());
+            if (parsedResult.assignees) {
+                // Check if the assignees field is a string that needs to be parsed as JSON
+                if (typeof parsedResult.assignees === 'string') {
+                    try {
+                        updateData.assignees = JSON.parse(parsedResult.assignees);
+                    } catch (e) {
+                        updateData.assignees = parsedResult.assignees.split(',').map(a => a.trim());
+                    }
+                } else {
+                    updateData.assignees = parsedResult.assignees;
+                }
+            }
             if (parsedResult.status) updateData.state = parsedResult.status;
+            if (parsedResult.repo || parsedResult.repository) updateData.repo = parsedResult.repo || parsedResult.repository;
         }
     } catch (e) {
         // If JSON parsing fails, proceed with regular expression parsing
-        const fields = ['name', 'description', 'assignees', 'status'];
+        const fields = ['name', 'description', 'assignees', 'status', 'repo', 'repository'];
         for (const field of fields) {
             const regex = new RegExp(`"${field}":\\s*"([^"]*)"`, 'i');
             const match = result.match(regex);
@@ -30,10 +42,19 @@ export function formatUpdateData(result) {
                         updateData.body = value;
                         break;
                     case 'assignees':
-                        updateData.assignees = value.split(',').map(a => a.trim());
+                        // Handle parsing of assignees field
+                        try {
+                            updateData.assignees = JSON.parse(value);
+                        } catch (e) {
+                            updateData.assignees = value.split(',').map(a => a.trim());
+                        }
                         break;
                     case 'status':
                         updateData.state = value;
+                        break;
+                    case 'repo':
+                    case 'repository':
+                        updateData.repo = value;
                         break;
                 }
             }
@@ -42,6 +63,7 @@ export function formatUpdateData(result) {
 
     return updateData;
 }
+
 
 export function getRepoAndIssueNumberFromLink(response) {
     try {
@@ -63,4 +85,9 @@ export function getRepoAndIssueNumberFromLink(response) {
         return null;
     }
 
+}
+
+export function extractIssueNumberFromUrl(url) {
+    const match = url.match(/\/issues\/(\d+)$/);
+    return match ? match[1] : null;
 }
