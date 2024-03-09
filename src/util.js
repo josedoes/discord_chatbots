@@ -12,7 +12,6 @@ export function formatUpdateData(result) {
             if (parsedResult.name) updateData.title = parsedResult.name;
             if (parsedResult.description) updateData.body = parsedResult.description;
             if (parsedResult.assignees) {
-                // Check if the assignees field is a string that needs to be parsed as JSON
                 if (typeof parsedResult.assignees === 'string') {
                     try {
                         updateData.assignees = JSON.parse(parsedResult.assignees);
@@ -25,10 +24,20 @@ export function formatUpdateData(result) {
             }
             if (parsedResult.status) updateData.state = parsedResult.status;
             if (parsedResult.repo || parsedResult.repository) updateData.repo = parsedResult.repo || parsedResult.repository;
+            if (parsedResult.projects) {
+                if (typeof parsedResult.projects === 'string') {
+                    try {
+                        updateData.projects = JSON.parse(parsedResult.projects);
+                    } catch (e) {
+                        updateData.projects = parsedResult.projects.split(',').map(a => a.trim());
+                    }
+                } else {
+                    updateData.projects = parsedResult.projects;
+                }
+            }
         }
     } catch (e) {
-        // If JSON parsing fails, proceed with regular expression parsing
-        const fields = ['name', 'description', 'assignees', 'status', 'repo', 'repository'];
+        const fields = ['name', 'description', 'assignees', 'status', 'repo', 'repository', 'projects'];
         for (const field of fields) {
             const regex = new RegExp(`"${field}":\\s*"([^"]*)"`, 'i');
             const match = result.match(regex);
@@ -42,7 +51,6 @@ export function formatUpdateData(result) {
                         updateData.body = value;
                         break;
                     case 'assignees':
-                        // Handle parsing of assignees field
                         try {
                             updateData.assignees = JSON.parse(value);
                         } catch (e) {
@@ -56,6 +64,13 @@ export function formatUpdateData(result) {
                     case 'repository':
                         updateData.repo = value;
                         break;
+                    case 'projects':
+                        try {
+                            updateData.projects = JSON.parse(value);
+                        } catch (e) {
+                            updateData.projects = value.split(',').map(a => a.trim());
+                        }
+                        break;
                 }
             }
         }
@@ -63,6 +78,7 @@ export function formatUpdateData(result) {
 
     return updateData;
 }
+
 
 
 export function getRepoAndIssueNumberFromLink(response) {

@@ -2,9 +2,11 @@
     "name": "chatbot",
     "version": "1.0.0",
     "type": "module",
+    "license": "MIT",
     "description": "project manager chatbot",
     "main": "/src/bot.js",
     "scripts": {
+        "test": "jest",
         "start": "node src/main.js"
     },
     "dependencies": {
