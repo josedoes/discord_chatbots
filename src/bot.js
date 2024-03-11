@@ -4,6 +4,7 @@ import { Client, Intents } from 'discord.js';
 import { fetchData } from './ii-sdk.js';
 import { formatUpdateData, getRepoAndIssueNumberFromLink, extractIssueNumberFromUrl } from './util.js';
 import { getGithubIssuesPrompt, fetchIssue, updateGithubIssue, createGithubIssue, addIssueToProject, fetchRepos, fetchProjects, fetchOrgId, fetchGithubIssuesForUser } from './github_service.js';
+import { updateIssueUserPrompt } from './prompts.js';
 
 export class Bot {
     constructor(config, projectConfig) {
@@ -105,7 +106,7 @@ export class Bot {
         if (detailsToUse) {
             console.log('detailsToUse is valid')
             const { org, repo, issueNumber } = detailsToUse;
-            const updateData = await this.fetchUpdateIssueData(this.issuesCache, issueNumber, message.content, _aiResponse, repo);
+            const updateData = await this.fetchUpdateIssueData(this.issuesCache, issueNumber, `${message.author.globalName}: ${message.content}`, _aiResponse, repo);
             console.log('update data result', updateData)
             try {
                 let project_titles;
@@ -141,7 +142,7 @@ export class Bot {
             detailsToUse = issueDetailsFromMessage;
         } else {
             console.log('using ai provided details')
-            const response = await this.getRetryResponse([...promptMessageHistory, { 'role': 'user', 'content': 'i expect that the first link you send will be link to the issue that will be updated' }]);
+            const response = await this.getRetryResponse([...promptMessageHistory, updateIssueUserPrompt()]);
             aiResponse = response
             const issueDetailsFromAI = getRepoAndIssueNumberFromLink(aiResponse);
             detailsToUse = issueDetailsFromAI;
@@ -200,7 +201,7 @@ export class Bot {
 
     async createIssue(message, promptMessageHistory) {
         const issueInstructions = await fetchData(this.projectConfig.iiKEY, this.agentId, promptMessageHistory);
-        const issueData = await this.fetchCreateIssueData(message.content, issueInstructions);
+        const issueData = await this.fetchCreateIssueData(`${message.author.globalName}: ${message.content}`, issueInstructions);
         console.log('issue data result', issueData);
         try {
             if (!issueData.repo) {
@@ -225,7 +226,7 @@ export class Bot {
                 return `Issue created: ${issueUrlAndId.url}, and added to project ${sucessfulProjs}`;
 
             }
-            return `Issue created: ${issueUrlAndId.url}, I did not update what project it is in`;
+            return `Issue created: ${issueUrlAndId.url}, I did not add it to a project would you like me to?`;
         } catch (error) {
             console.error('Error creating GitHub issue:', error);
             return 'Failed to create issue.';
@@ -246,12 +247,12 @@ export class Bot {
         return success;
     }
     async fetchCreateIssueData(userMessage, aiResponse) {
-        const possibleAssignees = Object.values(this.projectConfig.discordToGithubUsernames).join(', ');
-        const repos = this.reposCache.join(', ');
-        const projects = this.projectsCache.map((e) => e.title).join(', ');
+        const possibleAssignees = Object.values(this.projectConfig.discordToGithubUsernames).join('\n-');
+        const repos = this.reposCache.join('\n-');
+        const projects = this.projectsCache.map((e) => e.title).join('\n-');
 
         const prompt = [
-            { 'role': 'user', 'content': `\nbe aware that the possible assignees are ${possibleAssignees}\these are the possible repos: ${repos}\nand these are the possible projects(wording is meticulous): ${projects}(if assigned return an array with their name as an item)\nYou are creating a new issue so provide all details.'\n#instruction for the new issue:\nstrict orders:${userMessage}\nbackground:${aiResponse}. return all json fields` }
+            { 'role': 'user', 'content': `#the possible values are as follows\n#assignees: \n-${possibleAssignees}\n#repositories:\n-${repos}\n#projects(wording is meticulous): ${projects}\n(if assigned return an array with their name as an item)\n\n#You are creating a new issue so provide all details.'\n#instruction for the new issue:\nstrict orders:${userMessage}\nbackground:${aiResponse}. return all json fields with exact values` }
         ];
         console.log('sending ticket agent..', prompt);
 
@@ -263,9 +264,9 @@ export class Bot {
         let issueDetails;
         let oldDetails = '';
         let prompt;
-        const possibleAssignees = Object.values(this.projectConfig.discordToGithubUsernames).join(', ');
-        const repos = this.reposCache.join(', ');
-        const projects = this.projectsCache.map((e) => e.title).join(', ');
+        const possibleAssignees = Object.values(this.projectConfig.discordToGithubUsernames).join('\n-');
+        const repos = this.reposCache.join('\n-');
+        const projects = this.projectsCache.map((e) => e.title).join('\n-');
 
         issueDetails = await this.getIssueFromCache(issuesCache, issueNumber, repo);
         if (!issueDetails) {
@@ -273,7 +274,7 @@ export class Bot {
         }
         oldDetails = `Title: ${issueDetails.title}\nDescription: ${issueDetails.body}\nAssignees: ${issueDetails.assignees.map(a => a.login).join(', ')}\nStatus: ${issueDetails.state}`;
         prompt = [
-            { 'role': 'user', 'content': `\nbe aware that the possible assignees are ${possibleAssignees}\these are the possible repos: ${repos}\nand the only possible projects(wording is meticulous): ${projects}(if assigned return an array with their name as an item)\nOld version:\n${oldDetails}\n#instruction for new version:\nbroad:${userMessage}\ndetailed:${aiResponse}\return all json fields` }
+            { 'role': 'user', 'content': `#the possible values are as follows\n#assignees: \n-${possibleAssignees}\n#repositories:\n-${repos}\n#projects(wording is meticulous): ${projects}\n(if assigned return an array with their name as an item)\n\nOld version:\n${oldDetails}\n#instruction for new version:\nstrict orders:${userMessage}\ndetailed:${aiResponse}\return all json fields, with exact values` }
         ];
         console.log('sending ticket agent..', prompt);
 

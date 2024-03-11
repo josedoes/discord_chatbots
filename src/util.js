@@ -107,3 +107,4 @@ export function extractIssueNumberFromUrl(url) {
     const match = url.match(/\/issues\/(\d+)$/);
     return match ? match[1] : null;
 }
+
