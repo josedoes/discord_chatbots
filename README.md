@@ -7,6 +7,14 @@ This SDK enables developers to easily create and manage AI-powered Discord bots 
 - Cache messages for context-aware interactions
 - AI integration for natural language processing
 
+## Usage
+
+To interact with GitHub issues directly from Discord, include specific keywords in your messages:
+- To **create a new issue**, use `createissue`.
+- To **update an existing issue**, use `updateissue`.
+
+**Note:** The detection of these keywords is not case-sensitive, meaning you can use `CREATEISSUE`, `createIssue`, `UPDATEISSUE`, or any other case variations, and the bot will still recognize your command.
+
 ## Pre-requisits
 - An account with [LLM Lab](https://intelligentiterations.com)
 - A Discord bot token
@@ -15,6 +23,7 @@ This SDK enables developers to easily create and manage AI-powered Discord bots 
 
 
 ## Quick Start
+
 ### Configuration
 __Set Up Environment Variables__
 1. Create a .env file in your project root.
@@ -52,17 +61,19 @@ bots.forEach(async bot => await bot.initialize());
 ```
 
 
-## Additional Setup for Intelligent Iterations LLM Lab
+## AI Setup
 
 To use this SDK, you'll need to provides at least 1 agentId and updateIssuesBotId necessary for the SDK's AI configutation. 
-### Update Issues Agent
-> [!IMPORTANT]
-> This agent will be in charge of formatting the data for the github api, you can configure your agent with these values in the lab
 
-model: *mistal-small*
+## Update Issues Agent
 
-prompt:
-```
+> **Important:** This agent is responsible for formatting the data for the GitHub API. You can configure your agent with the following values in the lab:
+
+- **Model**: `mistal-small`
+
+#### Prompt Configuration:
+
+```plaintext
 Update the issue now by replying with one of these fields:name, description, assignees, status (open, closed), projects
 and the updated value next to it in JSON format
 
@@ -71,10 +82,13 @@ Example format for assistant reply for the github API:{“name”: “chat list 
 be brief and abide exactly by the provided options for possible values.
 ```
 
-the id of this agent with be passed as the value for updateIssuesBotId
+
+the ID of this agent with be passed as the value for updateIssuesBotId
 
 ### User facing agent
+This will be the agent that will talk to your users, you can create however many you want and add them to the discordBotConfig list! 
 
+Just get the agent id from the agent lab and assign it as the value for agentId
 
 ### Running Your Bot
 __With Docker__
