@@ -15,7 +15,7 @@ To interact with GitHub issues directly from Discord, include specific keywords 
 
 **Note:** The detection of these keywords is not case-sensitive, meaning you can use `CREATEISSUE`, `createIssue`, `UPDATEISSUE`, or any other case variations, and the bot will still recognize your command.
 
-## Pre-requisits
+## Prerequisites
 - An account with [LLM Lab](https://intelligentiterations.com)
 - A Discord bot token
     - your bot added to a Discord server with the necessary permissions.
