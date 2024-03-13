@@ -7,11 +7,12 @@
     "main": "/src/bot.js",
     "scripts": {
         "test": "jest",
-        "start": "node src/main.js"
+        "start": "node example/main.js"
     },
     "dependencies": {
         "axios": "^0.21.1",
         "discord.js": "^13.3.1",
-        "dotenv": "^10.0.0"
+        "dotenv": "^10.0.0",
+        "llm_lab": "^1.0.1"
     }
 }

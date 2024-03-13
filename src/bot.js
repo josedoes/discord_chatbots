@@ -3,8 +3,7 @@ dotenv.config();
 import { Client, Intents } from 'discord.js';
 import { fetchData } from './ii-sdk.js';
 import { formatUpdateData, getRepoAndIssueNumberFromLink, extractIssueNumberFromUrl } from './util.js';
-import { getGithubIssuesPrompt, fetchIssue, updateGithubIssue, createGithubIssue, addIssueToProject, fetchRepos, fetchProjects, fetchOrgId, fetchGithubIssuesForUser } from './github_service.js';
-import { updateIssueUserPrompt } from './prompts.js';
+import { getGithubIssuesPrompt, fetchIssue, updateGithubIssue, createGithubIssue, addIssueToProject, fetchRepos, fetchProjects, fetchOrgId } from './github_service.js';
 
 export class Bot {
     constructor(config, projectConfig) {
