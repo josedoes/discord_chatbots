@@ -9,11 +9,11 @@ const discordBotConfig = [
         agentId: 'your_agent_id', ///you'll have to get this from the llm lab (see: additional set-up),
         showOpenIssues: true ///he will see all the github issues which are open
     },
-///other bots u want to interact with
+    ///other bots u want to interact with
 ];
 const projectConfig = {
-    githubOrg: 'intelligent-iterations',
-    discordToGithubUsernames: { 'lucystag.': 'luciana-lara', },
+    githubOrg: 'your-org',
+    discordToGithubUsernames: { 'a-discord-username': 'a-github-username', },
     updateIssuesBotId: "your_update_issues_agent_id",///you'll have to get this from the llm lab (see: additional set-up)
     maxMessageCacheLength: 10,
     iiKEY: process.env.II_KEY,

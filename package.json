@@ -3,11 +3,12 @@
     "version": "1.0.0",
     "type": "module",
     "license": "MIT",
+    "homepage": "https://github.com/intelligent-iterations/discord_chatbots.git",
     "description": "github project manager chatbot",
     "main": "/src/bot.js",
     "scripts": {
-        "test": "jest",
-        "start": "node example/main.js"
+        "start": "node example/main.js",
+        "deploy_agents": "./start.sh"
     },
     "dependencies": {
         "axios": "^0.21.1",

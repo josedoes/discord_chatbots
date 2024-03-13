@@ -24,6 +24,16 @@ To interact with GitHub issues directly from Discord, include specific keywords 
 
 ## Quick Start
 
+### Installation
+```
+npm install discord_chatbots
+```
+
+**To contribute**
+```
+git clone https://github.com/intelligent-iterations/discord_chatbots.git
+```
+
 ### Configuration
 __Set Up Environment Variables__
 1. Create a .env file in your project root.
@@ -96,7 +106,7 @@ __With Docker__
 If you're using Docker, you can start your bot using the start.sh script. This script should build your Docker image and run your bot instance inside a Docker container. Ensure start.sh is executable:
 ```
 chmod +x start.sh
-./start.sh
+npm run deploy_agents
 ```
 __Without Docker__
 
@@ -104,5 +114,5 @@ To run your bot directly without Docker, simply start your application:
 ```
 node main.js
 ```
-replace main.js with whatever file which is initializing your Bot
+replace main.js with whichever file which is initializing your Bot
 
