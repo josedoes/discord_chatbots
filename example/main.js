@@ -22,3 +22,4 @@ const projectConfig = {
 const bots = discordBotConfig.map(config => new Bot(config, projectConfig));
 
 bots.forEach(async bot => await bot.initialize());
+

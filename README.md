@@ -101,12 +101,15 @@ This will be the agent that will talk to your users, you can create however many
 Just get the agent id from the agent lab and assign it as the value for agentId
 
 ### Running Your Bot
+**For Developers and Contributors**
+
+If you've cloned the repository for development or contribution purposes, follow these steps to run the bot:
 __With Docker__
 
 If you're using Docker, you can start your bot using the start.sh script. This script should build your Docker image and run your bot instance inside a Docker container. Ensure start.sh is executable:
 ```
 chmod +x start.sh
-npm run deploy_agents
+./start.sh
 ```
 __Without Docker__
 
@@ -114,5 +117,5 @@ To run your bot directly without Docker, simply start your application:
 ```
 node main.js
 ```
-replace main.js with whichever file which is initializing your Bot
+replace main.js with whatever file which is initializing your Bot
 
