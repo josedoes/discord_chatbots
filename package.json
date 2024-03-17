@@ -11,7 +11,7 @@
         "deploy_agents": "./start.sh"
     },
     "dependencies": {
-        "axios": "^0.21.1",
+        "axios": "^1.6.8",
         "discord.js": "^13.3.1",
         "llm_lab": "^1.0.1"
     }
