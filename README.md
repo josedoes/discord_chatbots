@@ -34,16 +34,6 @@ npm install discord_chatbots
 git clone https://github.com/intelligent-iterations/discord_chatbots.git
 ```
 
-### Configuration
-__Set Up Environment Variables__
-1. Create a .env file in your project root.
-2. Add the following lines, replacing your_value_here with your actual credentials:
-```
-II_KEY= <your_ii_key> //you can get this in user settings
-GITHUB_TOKEN= <your_github_token>
-DISCORD_BOT_TOKEN= <your_discord_bot_token>
-```
-
 __Configuring the Bot class__
 
 initialize your bot with these values
@@ -99,4 +89,3 @@ the ID of this agent with be passed as the value for updateIssuesBotId
 This will be the agent that will talk to your users, you can create however many you want and add them to the discordBotConfig list! 
 
 Just get the agent id from the agent lab and assign it as the value for agentId
-

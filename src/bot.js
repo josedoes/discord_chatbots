@@ -1,5 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
 import { Client, Intents } from 'discord.js';
 import { fetchData } from './ii-sdk.js';
 import { formatUpdateData, getRepoAndIssueNumberFromLink, extractIssueNumberFromUrl } from './util.js';
