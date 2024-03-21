@@ -101,6 +101,7 @@ export async function createGithubIssue(org, repo, token, title, body, assignees
         body,
         assignees
     };
+    console.log(`createGithubIssue sending data ${data}`)
     try {
         const response = await axios.post(url, data, { headers });
         console.log('createGithubIssue', response.data.node_id)

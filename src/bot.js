@@ -223,10 +223,11 @@ export class Bot {
         console.log('issue data result', issueData);
         try {
             if (!issueData.repo) {
-                console.log('repo wasnt provided for createissue')
                 issueData.repo = this.reposCache[0];
+                console.log('repo wasnt provided for createissue defaulting to', issueData.repo)
             }
             const issueUrlAndId = await createGithubIssue(this.projectConfig.githubOrg, issueData.repo, this.projectConfig.GITHUB_TOKEN, issueData.title, issueData.body, issueData.assignees);
+
             const newIssue = {
                 number: extractIssueNumberFromUrl(issueUrlAndId.url),
                 title: issueData.title,
