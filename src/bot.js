@@ -3,6 +3,8 @@ import { fetchData } from './ii-sdk.js';
 import { formatUpdateData, getRepoAndIssueNumberFromLink, extractIssueNumberFromUrl } from './util.js';
 import { getGithubIssuesPrompt, fetchIssue, updateGithubIssue, createGithubIssue, addIssueToProject, fetchRepos, fetchProjects, fetchOrgId } from './github_service.js';
 
+
+
 export class Bot {
     constructor(config, projectConfig) {
         this.client = new Client({
@@ -95,6 +97,24 @@ export class Bot {
             console.error('An error occurred while sending the response:', error);
         }
     }
+    getFormatUpdateIssuePrompt(assignees, projects, userInstructions, botInstructions, repos) {
+        return ```
+    #the possible values are as follows
+    #assignees: 
+    -${assignees}
+    #repositories:
+    -${repos}
+    #projectswording is meticulous): 
+    -${projects}
+    (if assigned return an array with their name as an item)
+    #You are creating a new issue so provide all details.
+    #instruction for the new issue:
+    strict orders:
+    ${userInstructions}
+    background:
+    ${botInstructions}
+    }```
+    }
     async startUpdateIssue(message, promptMessageHistory) {
         let _aiResponse;
         console.log('startUpdateIssue called')
@@ -139,7 +159,8 @@ export class Bot {
             detailsToUse = issueDetailsFromMessage;
         } else {
             console.log('using ai provided details')
-            const response = await this.getRetryResponse([...promptMessageHistory, updateIssueUserPrompt()]);
+
+            const response = await this.getRetryResponse([...promptMessageHistory, { 'role': 'user', 'content': 'i expect that the first link you send will be link to the issue that will be updated' }]);
             aiResponse = response
             const issueDetailsFromAI = getRepoAndIssueNumberFromLink(aiResponse);
             detailsToUse = issueDetailsFromAI;
@@ -253,7 +274,7 @@ export class Bot {
         ];
         console.log('sending ticket agent..', prompt);
 
-        let result = await fetchData(this.projectConfig.iiKEY, this.projectConfig.updateIssuesBotId, prompt);
+        let result = await fetchData(this.projectConfig.iiKEY, this.projectConfig.formatIssueAgentId, prompt);
         console.log('result from ticketagent', result);
         return formatUpdateData(result);
     }
@@ -271,11 +292,11 @@ export class Bot {
         }
         oldDetails = `Title: ${issueDetails.title}\nDescription: ${issueDetails.body}\nAssignees: ${issueDetails.assignees.map(a => a.login).join(', ')}\nStatus: ${issueDetails.state}`;
         prompt = [
-            { 'role': 'user', 'content': `#the possible values are as follows\n#assignees: \n-${possibleAssignees}\n#repositories:\n-${repos}\n#projects(wording is meticulous): ${projects}\n(if assigned return an array with their name as an item)\n\nOld version:\n${oldDetails}\n#instruction for new version:\nstrict orders:${userMessage}\ndetailed:${aiResponse}\return all json fields, with exact values` }
+            { 'role': 'user', 'content': this.getFormatUpdateIssuePrompt(possibleAssignees, projects, userMessage, aiResponse, repos) }
         ];
         console.log('sending ticket agent..', prompt);
 
-        let result = await fetchData(this.projectConfig.iiKEY, this.projectConfig.updateIssuesBotId, prompt);
+        let result = await fetchData(this.projectConfig.iiKEY, this.projectConfig.formatIssueAgentId, prompt);
         console.log('result from ticketagent', result);
         return formatUpdateData(result);
     }
