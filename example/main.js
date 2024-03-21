@@ -12,7 +12,7 @@ const discordBotConfig = [
 const projectConfig = {
     githubOrg: 'your-org',
     discordToGithubUsernames: { 'a-discord-username': 'a-github-username', },
-    updateIssuesBotId: "your_update_issues_agent_id",///you'll have to get this from the llm lab (see: additional set-up)
+    formatIssueAgentId: "your_update_issues_agent_id",///you'll have to get this from the llm lab (see: additional set-up)
     maxMessageCacheLength: 10,
     iiKEY: 'your LLM Lab api key',
     GITHUB_TOKEN: 'your github token',
