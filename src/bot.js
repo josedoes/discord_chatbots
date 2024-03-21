@@ -98,58 +98,72 @@ export class Bot {
         }
     }
     getFormatUpdateIssuePrompt(assignees, projects, userInstructions, botInstructions, repos) {
-        return ```
-    #the possible values are as follows
-    #assignees: 
-    -${assignees}
-    #repositories:
-    -${repos}
-    #projectswording is meticulous): 
-    -${projects}
-    (if assigned return an array with their name as an item)
-    #You are creating a new issue so provide all details.
-    #instruction for the new issue:
-    strict orders:
-    ${userInstructions}
-    background:
-    ${botInstructions}
-    }```
+        return `
+        # The possible values are as follows
+        # Assignees: 
+        - ${assignees}
+        # Repositories:
+        - ${repos}
+        # Projects (wording is meticulous): 
+        - ${projects}
+        # You are creating a new issue, so provide all details.
+        # Instruction for the new issue:
+        Strict orders:
+        ${userInstructions}
+        Background:
+        ${botInstructions}
+        `;
     }
+
     async startUpdateIssue(message, promptMessageHistory) {
         let _aiResponse;
         console.log('startUpdateIssue called')
         const { aiResponse: pmRepsonse, detailsToUse } = await this.getIssueDetails(message, promptMessageHistory);
         _aiResponse = pmRepsonse;
         if (detailsToUse) {
-            console.log('detailsToUse is valid')
-            const { org, repo, issueNumber } = detailsToUse;
-            const updateData = await this.fetchUpdateIssueData(this.issuesCache, issueNumber, `${message.author.globalName}: ${message.content}`, _aiResponse, repo);
-            console.log('update data result', updateData)
-            try {
-                let project_titles;
-                if (updateData.projects) {
-                    project_titles = updateData.projects;
-                    delete updateData.projects;;
-                }
-                const issueUrlAndId = await updateGithubIssue(org, repo, this.projectConfig.GITHUB_TOKEN, issueNumber, updateData);
-                _aiResponse = `Issue updated: ${issueUrlAndId.url}\n, I did not change the project it belongs to`;
-
-                console.log('updateGithubIssue success')
-                if (project_titles) {
-                    const sucessfulProjs = (await this.addIssueToProjects(project_titles, issueUrlAndId.id,)).join(', ');
-                    _aiResponse = `Issue updated: ${issueUrlAndId.url}, and added to project(s): ${sucessfulProjs}`;
-                }
-            }
-            catch (error) {
-                console.error('Error updating GitHub issue:', error);
-                _aiResponse = `Failed to update issue: ${updateData}`;
-            }
+            _aiResponse = await this.useAiDetails(pmRepsonse, message, detailsToUse);
         } else {
-            _aiResponse = 'Will do! I am having trouble understanding which issue you want to update, please retry the command with the link included!';
+            const { aiResponse: retryResponse, retryDetails } = await this.getIssueDetails(message, [promptMessageHistory, { 'role': 'user', 'content': 'return the link' }]);
+            if (retryDetails) {
+                console.log(
+                    'startUpdateIssue retrying..'
+                )
+                _aiResponse = await this.useAiDetails(retryResponse, message, retryDetails);
+            } else {
+                _aiResponse = 'Will do! I am having trouble understanding which issue you want to update, please retry the command with the link included!';
+            }
+
         }
 
         return _aiResponse;
     }
+    async useAiDetails(aiResponse, message, detailsToUse) {
+        console.log('detailsToUse is valid')
+        const { org, repo, issueNumber } = detailsToUse;
+        const updateData = await this.fetchUpdateIssueData(this.issuesCache, issueNumber, `${message.author.globalName}: ${message.content}`, aiResponse, repo);
+        console.log('update data result', updateData)
+        try {
+            let project_titles;
+            if (updateData.projects) {
+                project_titles = updateData.projects;
+                delete updateData.projects;;
+            }
+            const issueUrlAndId = await updateGithubIssue(org, repo, this.projectConfig.GITHUB_TOKEN, issueNumber, updateData);
+            aiResponse = `Issue updated: ${issueUrlAndId.url}\n, I did not change the project it belongs to`;
+
+            console.log('updateGithubIssue success')
+            if (project_titles) {
+                const sucessfulProjs = (await this.addIssueToProjects(project_titles, issueUrlAndId.id,)).join(', ');
+                aiResponse = `Issue updated: ${issueUrlAndId.url}, and added to project(s): ${sucessfulProjs}`;
+            }
+        }
+        catch (error) {
+            console.error('Error updating GitHub issue:', error);
+            aiResponse = `Failed to update issue: ${updateData}`;
+        }
+        return aiResponse;
+    }
+
     async getIssueDetails(message, promptMessageHistory) {
         let detailsToUse;
         let aiResponse = 'Sure thing!';
@@ -226,6 +240,10 @@ export class Bot {
                 issueData.repo = this.reposCache[0];
                 console.log('repo wasnt provided for createissue defaulting to', issueData.repo)
             }
+            if (!issueData.title) {
+                issueData.title = message.content;
+                console.log('title wasnt provided for createissue defaulting to', issueData.title)
+            }
             const issueUrlAndId = await createGithubIssue(this.projectConfig.githubOrg, issueData.repo, this.projectConfig.GITHUB_TOKEN, issueData.title, issueData.body, issueData.assignees);
 
             const newIssue = {
@@ -245,7 +263,7 @@ export class Bot {
                 return `Issue created: ${issueUrlAndId.url}, and added to project ${sucessfulProjs}`;
 
             }
-            return `Issue created: ${issueUrlAndId.url}, I did not add it to a project would you like me to?`;
+            return `Issue created: ${issueUrlAndId.url}, I did not add it to a project would you like me to? (hint: include updateissue if yes)`;
         } catch (error) {
             console.error('Error creating GitHub issue:', error);
             return 'Failed to create issue.';
@@ -271,7 +289,7 @@ export class Bot {
         const projects = this.projectsCache.map((e) => e.title).join('\n-');
 
         const prompt = [
-            { 'role': 'user', 'content': `#the possible values are as follows\n#assignees: \n-${possibleAssignees}\n#repositories:\n-${repos}\n#projects(wording is meticulous): ${projects}\n(if assigned return an array with their name as an item)\n\n#You are creating a new issue so provide all details.'\n#instruction for the new issue:\nstrict orders:${userMessage}\nbackground:${aiResponse}. return all json fields with exact values` }
+            { 'role': 'user', 'content': `#the possible values are as follows\n#assignees: \n-${possibleAssignees}\n#repositories:\n-${repos}\n#projects(wording is meticulous): ${projects}\n(if assigned return an array with their name as an item)\n\n#You are creating a new issue, all details are required.'\n#instruction for the new issue:\nstrict orders:${userMessage}\nbackground:${aiResponse}. return all json fields with exact values` }
         ];
         console.log('sending ticket agent..', prompt);
 

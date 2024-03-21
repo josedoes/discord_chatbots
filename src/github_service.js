@@ -101,13 +101,14 @@ export async function createGithubIssue(org, repo, token, title, body, assignees
         body,
         assignees
     };
-    console.log(`createGithubIssue sending data ${data}`)
+    console.log(`createGithubIssue sending data ${JSON.stringify(data)} `)
     try {
         const response = await axios.post(url, data, { headers });
         console.log('createGithubIssue', response.data.node_id)
         return { url: response.data.html_url, id: response.data.node_id }; // Return the URL of the created issue
     } catch (error) {
-        throw new Error(`Failed to create GitHub issue: ${error.response.statusText}`);
+        const errorMessage = error.response ? error.response.statusText : error.message;
+        throw new Error(`Failed to create GitHub issue: ${errorMessage}`);
     }
 }
 
